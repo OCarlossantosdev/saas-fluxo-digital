@@ -1,0 +1,149 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* --- CORES CLARAS (Mantidas) --- */
+  --color-midnight-blue: #0b1957;
+  --color-sapphire: #426bc2;
+  --color-petal: #e8d9ed;
+  --color-lace: #f7f4ed;
+  --color-lavender: #d2b3db;
+  --color-bridal: #e9f3ff;
+
+  /* --- NOVA PALETA JET BLACK (#0a0a0a) --- */
+  --color-soft-oat: #F0EDE5;    /* Texto Claro */
+  --color-subtle-border: #1f1f1f; /* COR NOVA: Cinza muito escuro para bordas sutis */
+  --color-slopes: #B3B7BA;      /* Texto Secundário */
+  --color-jet: #0a0a0a;         /* Fundo Principal */
+  
+  /* --- Mapeamento SHADCN --- */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* MODO CLARO (Mantido) */
+    --background: #f7f4ed; 
+    --foreground: #0b1957; 
+    --card: #ffffff;
+    --card-foreground: #0b1957;
+    --popover: #ffffff;
+    --popover-foreground: #0b1957;
+    --primary: #0b1957; 
+    --primary-foreground: #f7f4ed; 
+    --secondary: #e8d9ed; 
+    --secondary-foreground: #0b1957;
+    --muted: #e9f3ff; 
+    --muted-foreground: #426bc2; 
+    --accent: #e9f3ff;
+    --accent-foreground: #0b1957;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --border: #d2b3db; 
+    --input: #d2b3db;
+    --ring: #426bc2; 
+  }
+
+  .dark {
+    /* --- MODO ESCURO (#0a0a0a) --- */
+    --background: #0a0a0a; 
+    --foreground: #F0EDE5; 
+    --card: #0a0a0a; 
+    --card-foreground: #F0EDE5; 
+    --popover: #0a0a0a;
+    --popover-foreground: #F0EDE5;
+    --primary: #F0EDE5; 
+    --primary-foreground: #0a0a0a; 
+    --secondary: #171717; 
+    --secondary-foreground: #F0EDE5;
+    --muted: #171717; 
+    --muted-foreground: #B3B7BA; 
+    --accent: #171717; 
+    --accent-foreground: #F0EDE5;
+    --destructive: #7f1d1d;
+    --destructive-foreground: #F0EDE5;
+
+    /* CORREÇÃO AQUI: Usando o cinza escuro (#1f1f1f) para ficar sutil */
+    --border: #1f1f1f; 
+    --input: #1f1f1f; 
+    
+    --ring: #F0EDE5; 
+  }
+}
+
+@layer base {
+  * {
+    /* Removemos o /30 pois agora a cor #1f1f1f já é exata para o fundo escuro */
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Esconde a barra de rolagem no Chrome, Safari e Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Esconde no IE, Edge e Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE e Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
+
+/* src/app/globals.css */
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #333333; /* Cor discreta para o Dark Mode */
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #444444;
+  }
+
+  /* Suporte para Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #333333 transparent;
+  }
+}
