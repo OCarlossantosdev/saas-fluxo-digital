@@ -17,7 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { 
-  Plus, Search, Trash2, Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Wallet, Calendar as CalendarIcon
+  Plus, Search, Trash2, Loader2, DollarSign, ArrowUpCircle, ArrowDownCircle, Wallet, Calendar as CalendarIcon, AlertTriangle
 } from "lucide-react";
 
 interface Transaction {
@@ -37,6 +37,10 @@ export default function FaturamentoPage() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // --- ESTADOS PARA MODAL DE EXCLUSÃO ---
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [transactionToDeleteId, setTransactionToDeleteId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     description: "",
@@ -143,12 +147,24 @@ export default function FaturamentoPage() {
     setIsSaving(false);
   }
 
-  async function handleDeleteTransaction(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este lançamento?")) return;
-    const { error } = await supabase.from("transactions").delete().eq("id", id);
+  // --- SOLICITAÇÃO DE EXCLUSÃO ---
+  function requestDeleteTransaction(id: string) {
+    setTransactionToDeleteId(id);
+    setIsDeleteModalOpen(true);
+  }
+
+  // --- CONFIRMAÇÃO DE EXCLUSÃO ---
+  async function confirmDeleteTransaction() {
+    if (!transactionToDeleteId) return;
+    
+    const { error } = await supabase.from("transactions").delete().eq("id", transactionToDeleteId);
+    
     if (!error) {
-      setTransactions(transactions.filter((t) => t.id !== id));
+      setTransactions(transactions.filter((t) => t.id !== transactionToDeleteId));
     }
+    
+    setIsDeleteModalOpen(false);
+    setTransactionToDeleteId(null);
   }
 
   const filteredTransactions = transactions.filter(t => 
@@ -341,7 +357,8 @@ export default function FaturamentoPage() {
                         {t.type === 'receita' ? '+' : '-'}{formatCurrency(t.amount)}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => handleDeleteTransaction(t.id)}>
+                        {/* Botão atualizado para abrir modal */}
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => requestDeleteTransaction(t.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -353,6 +370,38 @@ export default function FaturamentoPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* --- MODAL DE EXCLUSÃO (NOVO) --- */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[400px] border-red-500/20 bg-card">
+          <DialogHeader className="items-center text-center">
+            <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+            </div>
+            <DialogTitle className="text-xl">Excluir Lançamento?</DialogTitle>
+            <DialogDescription className="text-sm">
+              Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-4">
+            <Button 
+              variant="destructive" 
+              className="w-full font-semibold shadow-sm" 
+              onClick={confirmDeleteTransaction}
+            >
+              Confirmar Exclusão
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

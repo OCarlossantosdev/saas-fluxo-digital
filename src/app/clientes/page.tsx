@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { 
-  Plus, Search, Trash2, User, Mail, Loader2, DollarSign, Building2, Phone, MoreHorizontal, Edit, MapPin, Map 
+  Plus, Search, Trash2, User, Mail, Loader2, DollarSign, Building2, Phone, MoreHorizontal, Edit, MapPin, Map, AlertTriangle 
 } from "lucide-react";
 
 interface Client {
@@ -74,6 +74,10 @@ export default function ClientesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
+
+  // --- ESTADOS PARA O MODAL DE EXCLUSÃO ---
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [clientToDeleteId, setClientToDeleteId] = useState<string | null>(null);
 
   const [ufList, setUfList] = useState<IBGEUF[]>([]);
   const [cityList, setCityList] = useState<IBGECity[]>([]);
@@ -142,28 +146,18 @@ export default function ClientesPage() {
     setFormData({ ...formData, contract_value: formattedValue });
   };
 
-  // --- NOVA FUNÇÃO: MÁSCARA DE TELEFONE (XX) XXXXX-XXXX ---
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, ""); // Remove tudo que não é dígito
-    
-    // Limita a 11 dígitos
+    let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
-
-    // Aplica a formatação
     if (value.length > 10) {
-      // Formato (99) 99999-9999
       value = value.replace(/^(\d\d)(\d{5})(\d{4}).*/, "($1) $2-$3");
     } else if (value.length > 6) {
-      // Formato parcial (99) 9999-9999 (para fixos) ou digitando celular
       value = value.replace(/^(\d\d)(\d{4,5})(\d{0,4}).*/, "($1) $2-$3");
     } else if (value.length > 2) {
-      // Formato parcial (99) 99...
       value = value.replace(/^(\d\d)(\d{0,5}).*/, "($1) $2");
     } else if (value.length > 0) {
-      // Formato parcial (9...
       value = value.replace(/^(\d*)/, "($1");
     }
-    
     setFormData({ ...formData, phone: value });
   };
 
@@ -282,12 +276,21 @@ export default function ClientesPage() {
     setIsSaving(false);
   }
 
-  async function handleDeleteClient(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
-    const { error } = await supabase.from("clients").delete().eq("id", id);
+  // --- SOLICITAÇÃO DE EXCLUSÃO ---
+  function requestDeleteClient(id: string) {
+    setClientToDeleteId(id);
+    setIsDeleteModalOpen(true);
+  }
+
+  // --- CONFIRMAÇÃO DE EXCLUSÃO ---
+  async function confirmDeleteClient() {
+    if (!clientToDeleteId) return;
+    const { error } = await supabase.from("clients").delete().eq("id", clientToDeleteId);
     if (!error) {
-      setClients(clients.filter((client) => client.id !== id));
+      setClients(clients.filter((client) => client.id !== clientToDeleteId));
     }
+    setIsDeleteModalOpen(false);
+    setClientToDeleteId(null);
   }
 
   const filteredClients = clients.filter(client => 
@@ -337,13 +340,12 @@ export default function ClientesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground"/> Telefone</Label>
-                  {/* INPUT ATUALIZADO COM MÁSCARA */}
                   <Input 
                     id="phone" 
                     placeholder="(99) 99999-9999" 
                     value={formData.phone} 
                     onChange={handlePhoneChange} 
-                    maxLength={15} // Limita o tamanho para não estourar a máscara
+                    maxLength={15} 
                   />
                 </div>
               </div>
@@ -358,7 +360,6 @@ export default function ClientesPage() {
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
-                    {/* ATUALIZADO: side="bottom" força a abertura para baixo */}
                     <SelectContent position="popper" side="bottom" className="max-h-[200px]">
                       {ufList.map((uf) => (
                         <SelectItem key={uf.id} value={uf.sigla}>{uf.nome}</SelectItem>
@@ -380,7 +381,6 @@ export default function ClientesPage() {
                     <SelectTrigger>
                       <SelectValue placeholder={formData.state ? "Selecione a cidade" : "Selecione o estado primeiro"} />
                     </SelectTrigger>
-                    {/* ATUALIZADO: side="bottom" força a abertura para baixo */}
                     <SelectContent position="popper" side="bottom" className="max-h-[200px]">
                       {cityList.map((city) => (
                         <SelectItem key={city.id} value={city.nome}>{city.nome}</SelectItem>
@@ -515,7 +515,7 @@ export default function ClientesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10" 
-                              onClick={() => handleDeleteClient(client.id)}
+                              onClick={() => requestDeleteClient(client.id)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" /> Excluir
                             </DropdownMenuItem>
@@ -530,6 +530,38 @@ export default function ClientesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* --- MODAL DE EXCLUSÃO DE CLIENTE --- */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[400px] border-red-500/20 bg-card">
+          <DialogHeader className="items-center text-center">
+            <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+            </div>
+            <DialogTitle className="text-xl">Excluir Cliente?</DialogTitle>
+            <DialogDescription className="text-sm">
+              Tem certeza que deseja excluir este cliente? Todos os dados vinculados a ele podem ser perdidos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-4">
+            <Button 
+              variant="destructive" 
+              className="w-full font-semibold shadow-sm" 
+              onClick={confirmDeleteClient}
+            >
+              Confirmar Exclusão
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
