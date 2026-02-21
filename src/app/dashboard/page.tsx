@@ -39,11 +39,8 @@ export default function DashboardPage() {
     tooltipBg: isDark ? "#0f172a" : "#ffffff",
     
     // CORES DO MAPA:
-    // mapBase: Cor para estados sem clientes
-    mapBase: isDark ? "#2d3748" : "#d1d5db", // Cinza azulado escuro no dark | Cinza médio bem visível no light
-    // mapActive: Verde da Fluxo Digital
+    mapBase: isDark ? "#2d3748" : "#d1d5db", 
     mapActive: "#10b981", 
-    // mapBorder: Garante o contorno dos estados
     mapBorder: isDark ? "#1a202c" : "#ffffff", 
     mapHover: "#34d399"
   }), [isDark]);
@@ -64,15 +61,12 @@ export default function DashboardPage() {
         const topoJson = await topoRes.json();
         setTopology(topoJson);
 
-        // --- BUSCA DE DADOS NA TABELA TRANSACTIONS ---
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
+        // --- BUSCA DE DADOS: FILTROS DE USUÁRIO REMOVIDOS PARA MODO EQUIPE ---
         const [clientsRes, projectsRes, tasksRes, transRes] = await Promise.all([
-          supabase.from("clients").select("state").eq('user_id', user.id),
-          supabase.from("projects").select("status").eq('user_id', user.id),
-          supabase.from("agency_tasks").select("status").eq('user_id', user.id),
-          supabase.from("transactions").select("amount, type, date").eq('user_id', user.id)
+          supabase.from("clients").select("state"),
+          supabase.from("projects").select("status"),
+          supabase.from("agency_tasks").select("status"),
+          supabase.from("transactions").select("amount, type, date")
         ]);
 
         const financeiro = transRes.data || [];
@@ -107,7 +101,6 @@ export default function DashboardPage() {
 
           financeiro.forEach((t: any) => {
             const d = new Date(t.date);
-            // Filtra as transações que pertencem ao mês do loop e ao ano vigente
             if (d.getMonth() === index && d.getFullYear() === anoAtual) {
               const valor = Number(t.amount) || 0;
               if (t.type === 'receita') {
@@ -158,7 +151,7 @@ export default function DashboardPage() {
     colorAxis: {
       min: 0,
       stops: [
-        [0, colors.mapBase], // Cor definida no useMemo
+        [0, colors.mapBase], 
         [0.01, colors.mapActive],
         [1, colors.mapActive]
       ]
@@ -175,7 +168,7 @@ export default function DashboardPage() {
       joinBy: 'hc-key',
       allAreas: true,
       borderColor: colors.mapBorder,
-      borderWidth: 1, // Borda um pouco mais grossa para ajudar na visibilidade
+      borderWidth: 1,
       states: {
         hover: { color: colors.mapHover }
       },

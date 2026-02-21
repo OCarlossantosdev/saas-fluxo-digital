@@ -9,7 +9,8 @@ import {
   Plus, Search, AlertCircle, ChevronRight, 
   CheckSquare, Trash2, Calendar, User as UserIcon,
   Layout,
-  Archive
+  Archive,
+  AlertTriangle // Importado para o modal de exclusão
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,11 +59,15 @@ export default function TarefasPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Estados de UI - ADICIONADO "completed"
+  // Estados de UI
   const [selectedFilter, setSelectedFilter] = useState<"all" | "today" | "upcoming" | "overdue" | "completed">("today");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Estados para o Modal de Exclusão
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [taskToDeleteId, setTaskToDeleteId] = useState<string | null>(null);
 
   // Form State
   const [newTask, setNewTask] = useState({
@@ -128,11 +133,25 @@ export default function TarefasPage() {
     await supabase.from("agency_tasks").update({ status: newStatus }).eq("id", task.id);
   }
 
-  async function handleDeleteTask(id: string) {
-    if(!confirm("Excluir tarefa?")) return;
-    await supabase.from("agency_tasks").delete().eq("id", id);
-    setTasks(prev => prev.filter(t => t.id !== id));
-    if (selectedTask?.id === id) setSelectedTask(null);
+  // Abre o modal de confirmação
+  function requestDeleteTask(id: string) {
+    setTaskToDeleteId(id);
+    setIsDeleteModalOpen(true);
+  }
+
+  // Executa a exclusão após confirmação
+  async function confirmDeleteTask() {
+    if (!taskToDeleteId) return;
+    
+    await supabase.from("agency_tasks").delete().eq("id", taskToDeleteId);
+    setTasks(prev => prev.filter(t => t.id !== taskToDeleteId));
+    
+    if (selectedTask?.id === taskToDeleteId) {
+      setSelectedTask(null);
+    }
+    
+    setIsDeleteModalOpen(false);
+    setTaskToDeleteId(null);
   }
 
   // --- HELPERS ---
@@ -167,19 +186,14 @@ export default function TarefasPage() {
     if (searchTerm && !task.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     const date = task.due_date ? new Date(task.due_date) : null;
     
-    // Filtro Específico de Concluídas
     if (selectedFilter === "completed") return task.status === 'done';
 
-    // Outros Filtros (Geralmente mostram pendentes, exceto "Hoje" que mostra o progresso do dia)
     if (selectedFilter === "today") {
-      // Mostra hoje (pendentes ou feitas) OU atrasadas pendentes
       return (date && isToday(date)) || (date && isPast(date) && !isToday(date) && task.status !== 'done');
     }
     if (selectedFilter === "upcoming") return date && date > new Date() && !isToday(date) && task.status !== 'done';
     if (selectedFilter === "overdue") return date && isPast(date) && !isToday(date) && task.status !== 'done';
     
-    // "All" mostra pendentes por padrão para não poluir, ou tudo se preferir. 
-    // Aqui deixei mostrando tudo que NÃO está feito, para forçar o uso da aba "Concluídas" para ver histórico.
     if (selectedFilter === "all") return task.status !== 'done';
     
     return true; 
@@ -303,7 +317,6 @@ export default function TarefasPage() {
             <Layout className="w-4 h-4 text-muted-foreground" /> Todas
           </Button>
 
-          {/* NOVO BOTÃO: CONCLUÍDAS */}
           <Button variant={selectedFilter === 'completed' ? 'secondary' : 'ghost'} className="justify-start gap-3 h-10" onClick={() => setSelectedFilter('completed')}>
             <CheckCircle2 className="w-4 h-4 text-green-600" /> Concluídas
           </Button>
@@ -426,7 +439,8 @@ export default function TarefasPage() {
               <Badge variant="outline" className={`uppercase ${getPriorityColor(selectedTask.priority)}`}>
                 Prioridade {selectedTask.priority}
               </Badge>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-500/10" onClick={() => handleDeleteTask(selectedTask.id)}>
+              {/* Botão de excluir que abre o modal */}
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-500/10" onClick={() => requestDeleteTask(selectedTask.id)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -505,6 +519,38 @@ export default function TarefasPage() {
         )}
 
       </div>
+
+      {/* --- MODAL DE EXCLUSÃO --- */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-[400px] border-red-500/20 bg-card">
+          <DialogHeader className="items-center text-center">
+            <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+            </div>
+            <DialogTitle className="text-xl">Excluir Tarefa?</DialogTitle>
+            <DialogDescription className="text-sm">
+              Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-4">
+            <Button 
+              variant="destructive" 
+              className="w-full font-semibold shadow-sm" 
+              onClick={confirmDeleteTask}
+            >
+              Confirmar Exclusão
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
